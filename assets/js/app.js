@@ -64,20 +64,29 @@ d3.csv("assets/data/data.csv").then(data => {
   // This step is not necessary, but I wanted to eliminate
   // the unnecessary object attributes
   povertyData = data.map(r => {
+    newRow = {};
+    newRow.state = r.state;
+    newRow.abbr = r.abbr;
+
     xAxes.map(axis => {
-      if (r[axis.stat] < axis.min_value) axis.min_value = r[axis.stat];
-      if (r[axis.stat] > axis.max_value) axis.max_value = r[axis.stat];
+      rFloat = +r[axis.stat];
+      newRow[axis.stat] = rFloat;
+      if (rFloat < axis.min_value) axis.min_value = rFloat;
+      if (rFloat > axis.max_value) axis.max_value = rFloat;
     });
-    return Object.fromEntries(
-      Object.entries(r).filter(([key, value]) => key != "id" 
-                                              && key.slice(-3) != "Moe"
-                                              && key.slice(-4) != "High"
-                                              && key.slice(-3) != "Low"))
+
+    yAxes.map(axis => {
+      rFloat = +r[axis.stat];
+      newRow[axis.stat] = rFloat;
+      if (rFloat < axis.min_value) axis.min_value = rFloat;
+      if (rFloat > axis.max_value) axis.max_value = rFloat;
     });
-  // Compute the min and max values for each statistic
-  
+
+    return newRow;
+    });
 
   console.log(povertyData);
   console.log(xAxes);
+  console.log(yAxes);
 }
 );
