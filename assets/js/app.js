@@ -63,8 +63,8 @@ var chartGroup = svg.append("g")
   .attr("fill", "white");
 
 // Create group for x-axis labels
-var xLabelsGroup = chartGroup.append("g")
-                             .attr("transform", `translate(${axisWidth/2}, ${axisHeight + 20})`);
+var xLabelsGroup = svg.append("g")
+                      .attr("transform", `translate(${margin.left + axisWidth/2}, ${margin.top + axisHeight + 20})`);
 
 xAxes.map((axis, i) => {
   xLabelsGroup.append("text")
@@ -76,8 +76,8 @@ xAxes.map((axis, i) => {
 });
 
 // Create group for y-axis labels
-var yLabelsGroup = chartGroup.append("g")
-                             .attr("transform", `translate(0, ${axisHeight/2})`);
+var yLabelsGroup = svg.append("g")
+                      .attr("transform", `translate(${margin.left}, ${axisHeight/2})`);
 
 yAxes.map((axis, i) => {
   yLabelsGroup.append("text")
@@ -124,26 +124,15 @@ d3.csv("assets/data/data.csv").then(data => {
   console.log(xAxes);
   console.log(yAxes);
 
-  // append initial circles
-  let xLinearScale = xScale(currentXStatistic);
-  let yLinearScale = yScale(currentYStatistic);
-  circlesGroup = chartGroup.selectAll("circle")
-                               .data(povertyData)
-                               .enter()
-                               .append("circle")
-                               .attr("cx", d => xLinearScale(d[currentXStatistic]))
-                               .attr("cy", d => yLinearScale(d[currentYStatistic]))
-                               .attr("r", 20)
-                               .attr("fill", "pink")
-                               .attr("opacity", ".5");
-
   drawChart("poverty", "healthcare");
 }
 );
 
 function drawChart(newXStatistic, newYStatistic) {
+  let xLinearScale = xScale(currentXStatistic);
+  let yLinearScale = yScale(currentYStatistic);
+
   if (newXStatistic != currentXStatistic) {
-    let xLinearScale = xScale(newXStatistic);
     let bottomAxis = d3.axisBottom(xLinearScale);
     var xAxis = chartGroup.append("g")
                           .classed("x-axis", true)
@@ -155,7 +144,6 @@ function drawChart(newXStatistic, newYStatistic) {
   }
 
   if (newYStatistic != currentYStatistic) {
-    let yLinearScale = yScale(newYStatistic);
     let leftAxis = d3.axisLeft(yLinearScale);
     chartGroup.append("g")
               .call(leftAxis);
@@ -163,6 +151,27 @@ function drawChart(newXStatistic, newYStatistic) {
 
     currentYStatistic = newYStatistic;
   }
+  // Draw Circles
+  circlesGroup = chartGroup.selectAll("circle")
+                           .data(povertyData)
+                           .enter()
+                           .append("circle")
+                           .attr("cx", d => xLinearScale(d[currentXStatistic]))
+                           .attr("cy", d => yLinearScale(d[currentYStatistic]))
+                           .attr("r", 15)
+                           .attr("opacity", ".5")
+                           .classed("stateCircle", true);
+
+  // Add Text Labels on top of Circles
+  abbrGroup = chartGroup.selectAll("text")
+                        .data(povertyData)
+                        .enter()
+                        .append("text")
+                        .text(d => d.abbr)
+                        .attr("x", d => xLinearScale(d[currentXStatistic]))
+                        .attr("y", d => yLinearScale(d[currentYStatistic])+5)
+                        .classed("stateText", true);
+
   updateToolTip(newXStatistic, newYStatistic);
 }
 
