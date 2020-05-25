@@ -93,6 +93,7 @@ yAxes.map((axis, i) => {
 
 // Retrieve data from the CSV file and execute everything below
 var povertyData;
+var circlesGroup;
 d3.csv("assets/data/data.csv").then(data => {
   // Select the necessary object attributes
   // Convert numeric fields from strings
@@ -126,7 +127,7 @@ d3.csv("assets/data/data.csv").then(data => {
   // append initial circles
   let xLinearScale = xScale(currentXStatistic);
   let yLinearScale = yScale(currentYStatistic);
-  var circlesGroup = chartGroup.selectAll("circle")
+  circlesGroup = chartGroup.selectAll("circle")
                                .data(povertyData)
                                .enter()
                                .append("circle")
@@ -162,6 +163,7 @@ function drawChart(newXStatistic, newYStatistic) {
 
     currentYStatistic = newYStatistic;
   }
+  updateToolTip(newXStatistic, newYStatistic);
 }
 
 function xScale(xStatistic) {
@@ -192,4 +194,21 @@ function statistic2Index(statistic) {
       break;
   }
   return index;
+}
+
+// function used for updating circles group with new tooltip
+function updateToolTip(xStatistic, yStatistic) {
+  let xIdx = statistic2Index(xStatistic);
+  let yIdx = statistic2Index(yStatistic);
+
+  var toolTip = d3.tip()
+    .attr("class", "d3-tip")
+    .offset([80, -60])
+    .html(function(d) {
+      return (`${d.state}<br>${xAxes[xIdx].label}:  ${d[xStatistic]}<br>${yAxes[yIdx].label}:  ${d[yStatistic]}`);
+    });
+
+  circlesGroup.call(toolTip)
+              .on('mouseover', toolTip.show)
+              .on('mouseout', toolTip.hide);
 }
