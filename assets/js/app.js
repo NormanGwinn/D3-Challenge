@@ -44,8 +44,8 @@ var yAxes = [
    "min_value" : 100000.0,
    "max_value" : -100000.0}
 ];
-var currentXStatistic = "poverty";
-var currentYStatistic = "healthcare";
+var currentXStatistic = "none";
+var currentYStatistic = "none";
 
 // Draw the static part of the chart
 // Create an SVG area
@@ -54,7 +54,7 @@ var svg = d3
   .append("svg")
   .attr("width", svgWidth)
   .attr("height", svgHeight)
-  .attr("style","background-color:lightcyan");
+  /*.attr("style","background-color:lightcyan")*/;
 
 // Append an SVG group that will hold our chart,
 // and shift the latter by left and top margins.
@@ -69,31 +69,51 @@ var xLabelsGroup = svg.append("g")
 xAxes.map((axis, i) => {
   xLabelsGroup.append("text")
              .attr("x", 0)
-             .attr("y", i * 20)
+             .attr("y", 15 + i * 20)
              .attr("value", axis.statistic) // value to grab for event listener
-             .classed("active", true) // axis.statistic == currentXStatistic)
+             .attr("id", axis.statistic)
+             .classed("active", i == 0)
+             .classed("inactive", i != 0)
              .text(axis.label);
+});
+
+xLabelsGroup.selectAll("text")
+            .on("click", function() {
+  let newXStatistic = d3.select(this).attr("value");
+  xLabelsGroup.select(`#${currentXStatistic}`).classed("active", false).classed("inactive", true);
+  xLabelsGroup.select(`#${newXStatistic}`).classed("active", true).classed("inactive", false);
+  updateChart(newXStatistic, currentYStatistic);
 });
 
 // Create group for y-axis labels
 var yLabelsGroup = svg.append("g")
-                      .attr("transform", `translate(${margin.left}, ${axisHeight/2})`);
+                      .attr("transform", `translate(0, ${axisHeight/2})`);
 
 yAxes.map((axis, i) => {
   yLabelsGroup.append("text")
               .attr("transform", "rotate(-90)")
               .attr("x", 0)
-              .attr("y", -i * 20)
+              .attr("y", 20 + i * 20)
               .attr("value", axis.statistic) // value to grab for event listener
-              .classed("active", true) // axis.statistic == currentYStatistic)
+              .attr("id", axis.statistic)
+              .classed("active", i == 0)
+              .classed("inactive", i != 0)
               .text(axis.label);
 });
 
-
+yLabelsGroup.selectAll("text")
+            .on("click", function() {
+  let newYStatistic = d3.select(this).attr("value");
+  yLabelsGroup.select(`#${currentYStatistic}`).classed("active", false).classed("inactive", true);
+  yLabelsGroup.select(`#${newYStatistic}`).classed("active", true).classed("inactive", false);
+  updateChart(currentXStatistic, newYStatistic);
+});
 
 // Retrieve data from the CSV file and execute everything below
-var povertyData;
-var circlesGroup;
+var povertyData = null;
+var circlesGroup = null;
+var xAxisGroup = null;
+var yAxisGroup = null;
 d3.csv("assets/data/data.csv").then(data => {
   // Select the necessary object attributes
   // Convert numeric fields from strings
@@ -124,33 +144,25 @@ d3.csv("assets/data/data.csv").then(data => {
   console.log(xAxes);
   console.log(yAxes);
 
-  drawChart("poverty", "healthcare");
-}
-);
-
-function drawChart(newXStatistic, newYStatistic) {
+  // Draw the initial chart
+  currentXStatistic = xAxes[0].statistic;
+  currentYStatistic = yAxes[0].statistic;
   let xLinearScale = xScale(currentXStatistic);
   let yLinearScale = yScale(currentYStatistic);
 
-  if (newXStatistic != currentXStatistic) {
-    let bottomAxis = d3.axisBottom(xLinearScale);
-    var xAxis = chartGroup.append("g")
-                          .classed("x-axis", true)
-                          .attr("transform", `translate(0, ${axisHeight})`)
-                          .call(bottomAxis);
-    
+  // X-axis
+  let bottomAxis = d3.axisBottom(xLinearScale);
+  xAxisGroup = chartGroup.append("g")
+                             .classed("x-axis", true)
+                             .attr("transform", `translate(0, ${axisHeight})`)
+                             .call(bottomAxis);
 
-    currentXStatistic = newXStatistic;
-  }
-
-  if (newYStatistic != currentYStatistic) {
-    let leftAxis = d3.axisLeft(yLinearScale);
-    chartGroup.append("g")
+  // Y-axis
+  let leftAxis = d3.axisLeft(yLinearScale);
+  yAxisGroup = chartGroup.append("g")
+              .classed("y-axis", true)
               .call(leftAxis);
 
-
-    currentYStatistic = newYStatistic;
-  }
   // Draw Circles
   circlesGroup = chartGroup.selectAll("circle")
                            .data(povertyData)
@@ -163,7 +175,7 @@ function drawChart(newXStatistic, newYStatistic) {
                            .classed("stateCircle", true);
 
   // Add Text Labels on top of Circles
-  abbrGroup = chartGroup.selectAll("text")
+  abbrGroup = chartGroup.selectAll(".stateText")
                         .data(povertyData)
                         .enter()
                         .append("text")
@@ -172,8 +184,58 @@ function drawChart(newXStatistic, newYStatistic) {
                         .attr("y", d => yLinearScale(d[currentYStatistic])+5)
                         .classed("stateText", true);
 
+  // Add Tool Tips for hover on every circle
+  updateToolTip(currentXStatistic, currentYStatistic);
+}
+);
+
+// -------------------------------------------------------------
+//     UPDATE CHART
+//--------------------------------------------------------------
+
+function updateChart(newXStatistic, newYStatistic) {
+  let xLinearScale = xScale(newXStatistic);
+  let yLinearScale = yScale(newYStatistic);
+
+  if (newXStatistic != currentXStatistic) {
+    // Update x-axis
+    let bottomAxis = d3.axisBottom(xLinearScale);
+    xAxisGroup.transition()
+    .duration(1000)
+    .call(bottomAxis);
+
+
+
+    currentXStatistic = newXStatistic;
+  }
+
+  if (newYStatistic != currentYStatistic) {
+    let leftAxis = d3.axisLeft(yLinearScale);
+    yAxisGroup.transition()
+    .duration(1000)
+    .call(leftAxis);
+
+    currentYStatistic = newYStatistic;
+  }
+
+  // Update circle positions
+  circlesGroup.transition()
+  .duration(1000)
+  .attr("cx", d => xLinearScale(d[newXStatistic]))
+  .attr("cy", d => yLinearScale(d[newYStatistic]));
+
+  // Update state abbreviation positions
+  abbrGroup.transition()
+  .duration(1000)
+  .attr("x", d => xLinearScale(d[newXStatistic]))
+  .attr("y", d => yLinearScale(d[newYStatistic])+5);
+
   updateToolTip(newXStatistic, newYStatistic);
 }
+
+// -------------------------------------------------------------
+//     UTILITY FUNCTIONS
+//--------------------------------------------------------------
 
 function xScale(xStatistic) {
   let idx = statistic2Index(xStatistic);
@@ -209,6 +271,7 @@ function statistic2Index(statistic) {
 function updateToolTip(xStatistic, yStatistic) {
   let xIdx = statistic2Index(xStatistic);
   let yIdx = statistic2Index(yStatistic);
+  console.log(`updateToolTip1:  ${xStatistic} ${xIdx} ${yStatistic} ${yIdx}`)
 
   var toolTip = d3.tip()
     .attr("class", "d3-tip")
@@ -216,6 +279,7 @@ function updateToolTip(xStatistic, yStatistic) {
     .html(function(d) {
       return (`${d.state}<br>${xAxes[xIdx].label}:  ${d[xStatistic]}<br>${yAxes[yIdx].label}:  ${d[yStatistic]}`);
     });
+  console.log(`updateToolTip2:  The type of circlesGroup is ${typeof(circlesGroup)}.  The type of toolTip is ${typeof(toolTip)}.`)
 
   circlesGroup.call(toolTip)
               .on('mouseover', toolTip.show)
